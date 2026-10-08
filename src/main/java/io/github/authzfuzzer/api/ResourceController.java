@@ -32,19 +32,18 @@ public class ResourceController {
     /** Resources of the caller's own tenant. */
     @GetMapping
     List<ResourceDto> list(@AuthenticationPrincipal AppUserPrincipal caller) {
-        return service.list(caller.tenantId());
+        return service.list(caller);
     }
 
-    // Authorization (tenant + permission) is added for every endpoint in the RBAC commits 053-054.
     @GetMapping("/{id}")
     ResourceDto get(@AuthenticationPrincipal AppUserPrincipal caller, @PathVariable Long id) {
-        return service.get(id);
+        return service.get(caller, id);
     }
 
     @PostMapping
     ResponseEntity<ResourceDto> create(
             @AuthenticationPrincipal AppUserPrincipal caller, @Valid @RequestBody ResourceRequest request) {
-        ResourceDto created = service.create(caller.tenantId(), request);
+        ResourceDto created = service.create(caller, request);
         return ResponseEntity.created(URI.create("/api/resources/" + created.id()))
                 .body(created);
     }
@@ -54,12 +53,12 @@ public class ResourceController {
             @AuthenticationPrincipal AppUserPrincipal caller,
             @PathVariable Long id,
             @Valid @RequestBody ResourceRequest request) {
-        return service.update(id, request);
+        return service.update(caller, id, request);
     }
 
     @DeleteMapping("/{id}")
     ResponseEntity<Void> delete(@AuthenticationPrincipal AppUserPrincipal caller, @PathVariable Long id) {
-        service.delete(id);
+        service.delete(caller, id);
         return ResponseEntity.noContent().build();
     }
 }

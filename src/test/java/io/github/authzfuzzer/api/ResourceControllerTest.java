@@ -97,4 +97,19 @@ class ResourceControllerTest {
         mvc.perform(delete("/api/resources/1").with(as("alpha-admin"))).andExpect(status().isNoContent());
         mvc.perform(get("/api/resources/1").with(as("alpha-admin"))).andExpect(status().isNotFound());
     }
+
+    @Test
+    void crossTenantRequestsAre404OnEveryIdEndpoint() throws Exception {
+        // resource 1 belongs to alpha; bravo-admin has every permission but the wrong tenant
+        mvc.perform(get("/api/resources/1").with(as("bravo-admin"))).andExpect(status().isNotFound());
+        mvc.perform(put("/api/resources/1")
+                        .with(as("bravo-admin"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body("stolen", "x")))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/resources/1").with(as("bravo-admin"))).andExpect(status().isNotFound());
+        mvc.perform(get("/api/resources/1").with(as("alpha-viewer")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("alpha-doc-1"));
+    }
 }

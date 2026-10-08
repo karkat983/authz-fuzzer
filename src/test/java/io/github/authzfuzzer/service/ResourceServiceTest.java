@@ -12,15 +12,19 @@ import io.github.authzfuzzer.api.ResourceDto;
 import io.github.authzfuzzer.api.ResourceRequest;
 import io.github.authzfuzzer.domain.Resource;
 import io.github.authzfuzzer.domain.ResourceRepository;
+import io.github.authzfuzzer.domain.Role;
 import io.github.authzfuzzer.domain.Tenant;
 import io.github.authzfuzzer.domain.TenantRepository;
+import io.github.authzfuzzer.security.AppUserPrincipal;
+import io.github.authzfuzzer.security.AuthorizationService;
+import io.github.authzfuzzer.security.CrossTenantException;
 
 /**
- * Service behaviour against a real (in-memory H2) JPA layer. @DataJpaTest rolls back after
- * each test and does not run SeedData, so every test builds exactly the rows it needs.
+ * Service behaviour against a real (in-memory H2) JPA layer. @DataJpaTest rolls back after each
+ * test and does not run SeedData, so every test builds exactly the rows it needs.
  */
 @DataJpaTest(showSql = false)
-@Import(ResourceService.class)
+@Import({ResourceService.class, AuthorizationService.class})
 class ResourceServiceTest {
 
     @Autowired
@@ -40,92 +44,82 @@ class ResourceServiceTest {
         return resources.save(new Resource(name, "content of " + name, owner));
     }
 
+    static AppUserPrincipal admin(Tenant t) {
+        return new AppUserPrincipal(null, t.getName() + "-admin", "!", t.getId(), t.getName(), Role.ADMIN);
+    }
+
     static ResourceRequest request(String name, String content) {
         return new ResourceRequest(name, content);
     }
 
     @Test
-    void listReturnsOnlyTheTenantsResourcesInIdOrder() {
+    void listReturnsOnlyTheCallersResourcesInIdOrder() {
         Tenant a = tenant("alpha");
         Tenant b = tenant("bravo");
         resource("a1", a);
         resource("b1", b);
         resource("a2", a);
-        assertThat(service.list(a.getId())).extracting(ResourceDto::name).containsExactly("a1", "a2");
+        assertThat(service.list(admin(a))).extracting(ResourceDto::name).containsExactly("a1", "a2");
     }
 
     @Test
-    void listOfUnknownTenantIsEmpty() {
-        assertThat(service.list(999L)).isEmpty();
-    }
-
-    @Test
-    void getReturnsTheResource() {
-        Resource r = resource("a1", tenant("alpha"));
-        ResourceDto dto = service.get(r.getId());
+    void getReturnsOwnResource() {
+        Tenant a = tenant("alpha");
+        ResourceDto dto = service.get(admin(a), resource("a1", a).getId());
         assertThat(dto.name()).isEqualTo("a1");
         assertThat(dto.tenant()).isEqualTo("alpha");
     }
 
     @Test
     void getUnknownIdThrowsNotFound() {
-        assertThatThrownBy(() -> service.get(12345L)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.get(admin(tenant("alpha")), 12345L)).isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void createStoresResourceUnderTheGivenTenant() {
+    void createStoresResourceUnderTheCallersTenant() {
         Tenant a = tenant("alpha");
-        ResourceDto dto = service.create(a.getId(), request("plan", "q3"));
+        ResourceDto dto = service.create(admin(a), request("plan", "q3"));
         assertThat(dto.id()).isNotNull();
         assertThat(dto.tenant()).isEqualTo("alpha");
-        assertThat(service.list(a.getId())).extracting(ResourceDto::name).containsExactly("plan");
-    }
-
-    @Test
-    void createForUnknownTenantThrowsNotFound() {
-        assertThatThrownBy(() -> service.create(999L, request("x", "y"))).isInstanceOf(NotFoundException.class);
+        assertThat(service.list(admin(a))).extracting(ResourceDto::name).containsExactly("plan");
     }
 
     @Test
     void updateChangesNameAndContentButNotOwner() {
-        Resource r = resource("a1", tenant("alpha"));
-        ResourceDto dto = service.update(r.getId(), request("a1-v2", "new"));
+        Tenant a = tenant("alpha");
+        Resource r = resource("a1", a);
+        ResourceDto dto = service.update(admin(a), r.getId(), request("a1-v2", "new"));
         assertThat(dto.name()).isEqualTo("a1-v2");
         assertThat(dto.content()).isEqualTo("new");
         assertThat(dto.tenant()).isEqualTo("alpha");
-        assertThat(dto.createdAt()).isEqualTo(service.get(r.getId()).createdAt());
-    }
-
-    @Test
-    void updateUnknownIdThrowsNotFound() {
-        assertThatThrownBy(() -> service.update(4242L, request("x", "y"))).isInstanceOf(NotFoundException.class);
+        assertThat(dto.createdAt()).isEqualTo(service.get(admin(a), r.getId()).createdAt());
     }
 
     @Test
     void deleteRemovesTheResource() {
-        Resource r = resource("a1", tenant("alpha"));
-        service.delete(r.getId());
+        Tenant a = tenant("alpha");
+        Resource r = resource("a1", a);
+        service.delete(admin(a), r.getId());
         assertThat(resources.findById(r.getId())).isEmpty();
-    }
-
-    @Test
-    void deleteUnknownIdThrowsNotFound() {
-        assertThatThrownBy(() -> service.delete(777L)).isInstanceOf(NotFoundException.class);
-    }
-
-    @Test
-    void updateDoesNotTouchOtherTenantsRowWithSameName() {
-        Resource mine = resource("shared-name", tenant("alpha"));
-        Resource theirs = resource("shared-name", tenant("bravo"));
-        service.update(mine.getId(), request("renamed", "x"));
-        assertThat(service.get(theirs.getId()).name()).isEqualTo("shared-name");
     }
 
     @Test
     void createdIdsAreUnique() {
         Tenant a = tenant("alpha");
-        long first = service.create(a.getId(), request("one", "1")).id();
-        long second = service.create(a.getId(), request("two", "2")).id();
+        long first = service.create(admin(a), request("one", "1")).id();
+        long second = service.create(admin(a), request("two", "2")).id();
         assertThat(first).isNotEqualTo(second);
+    }
+
+    @Test
+    void everyIdBasedMethodRejectsAnotherTenantsResource() {
+        Resource theirs = resource("secret", tenant("bravo"));
+        AppUserPrincipal me = admin(tenant("alpha"));
+        Long id = theirs.getId();
+        assertThatThrownBy(() -> service.get(me, id)).isInstanceOf(CrossTenantException.class);
+        assertThatThrownBy(() -> service.update(me, id, request("x", "y"))).isInstanceOf(CrossTenantException.class);
+        assertThatThrownBy(() -> service.delete(me, id)).isInstanceOf(CrossTenantException.class);
+        assertThat(resources.findById(id))
+                .hasValueSatisfying(r -> assertThat(r.getName()).isEqualTo("secret"));
     }
 }
