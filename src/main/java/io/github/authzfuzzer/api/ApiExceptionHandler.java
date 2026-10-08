@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import io.github.authzfuzzer.security.CrossTenantException;
 import io.github.authzfuzzer.security.ForbiddenException;
 import io.github.authzfuzzer.service.NotFoundException;
 
@@ -16,8 +17,12 @@ import io.github.authzfuzzer.service.NotFoundException;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-    @ExceptionHandler(NotFoundException.class)
-    ProblemDetail notFound(NotFoundException e) {
+    /**
+     * A missing resource and another tenant's resource get the identical response, so a caller
+     * cannot learn which IDs exist in other tenants (docs/decisions/001-404-vs-403.md).
+     */
+    @ExceptionHandler({NotFoundException.class, CrossTenantException.class})
+    ProblemDetail notFound(RuntimeException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "Resource not found");
     }
 

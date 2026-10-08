@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.authzfuzzer.security.CrossTenantException;
 import io.github.authzfuzzer.service.NotFoundException;
 
 class ApiExceptionHandlerTest {
@@ -30,6 +31,11 @@ class ApiExceptionHandlerTest {
         @GetMapping("/missing/{id}")
         String missing(@PathVariable Long id) {
             throw new NotFoundException("resource of tenant bravo", id);
+        }
+
+        @GetMapping("/foreign/{id}")
+        String foreign(@PathVariable Long id) {
+            throw new CrossTenantException("bravo-admin", id);
         }
 
         @PostMapping("/echo")
@@ -59,5 +65,19 @@ class ApiExceptionHandlerTest {
         mvc.perform(post("/echo").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"\",\"content\":\"x\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields[0]").value("name"));
+    }
+
+    @Test
+    void crossTenantLooksExactlyLikeMissing() throws Exception {
+        String missing =
+                mvc.perform(get("/missing/7")).andReturn().getResponse().getContentAsString();
+        String foreign = mvc.perform(get("/foreign/7"))
+                .andExpect(status().isNotFound())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        // identical apart from the request path echoed in "instance"
+        org.assertj.core.api.Assertions.assertThat(foreign.replace("/foreign/7", "/missing/7"))
+                .isEqualTo(missing);
     }
 }
