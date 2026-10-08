@@ -19,7 +19,7 @@ import io.github.authzfuzzer.domain.TenantRepository;
  * Service behaviour against a real (in-memory H2) JPA layer. @DataJpaTest rolls back after
  * each test and does not run SeedData, so every test builds exactly the rows it needs.
  */
-@DataJpaTest
+@DataJpaTest(showSql = false)
 @Import(ResourceService.class)
 class ResourceServiceTest {
 
