@@ -7,7 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import io.github.authzfuzzer.api.ResourceDto;
 import io.github.authzfuzzer.api.ResourceMapper;
+import io.github.authzfuzzer.api.ResourceRequest;
+import io.github.authzfuzzer.domain.Resource;
 import io.github.authzfuzzer.domain.ResourceRepository;
+import io.github.authzfuzzer.domain.Tenant;
 import io.github.authzfuzzer.domain.TenantRepository;
 
 /**
@@ -35,5 +38,13 @@ public class ResourceService {
     public ResourceDto get(Long id) {
         return resources.findById(id).map(ResourceMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("resource", id));
+    }
+
+    /** Create a resource owned by the given tenant (the caller's tenant, never one from the body). */
+    @Transactional
+    public ResourceDto create(Long tenantId, ResourceRequest request) {
+        Tenant owner = tenants.findById(tenantId).orElseThrow(() -> new NotFoundException("tenant", tenantId));
+        Resource saved = resources.save(ResourceMapper.toEntity(request, owner));
+        return ResourceMapper.toDto(saved);
     }
 }

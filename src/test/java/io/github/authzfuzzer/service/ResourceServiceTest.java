@@ -62,4 +62,19 @@ class ResourceServiceTest {
     void getUnknownIdThrowsNotFound() {
         assertThatThrownBy(() -> service.get(12345L)).isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void createStoresResourceUnderTheGivenTenant() {
+        Tenant a = tenant("alpha");
+        ResourceDto dto = service.create(a.getId(), new io.github.authzfuzzer.api.ResourceRequest("plan", "q3"));
+        assertThat(dto.id()).isNotNull();
+        assertThat(dto.tenant()).isEqualTo("alpha");
+        assertThat(service.list(a.getId())).extracting(ResourceDto::name).containsExactly("plan");
+    }
+
+    @Test
+    void createForUnknownTenantThrowsNotFound() {
+        assertThatThrownBy(() -> service.create(999L, new io.github.authzfuzzer.api.ResourceRequest("x", "y")))
+                .isInstanceOf(NotFoundException.class);
+    }
 }
