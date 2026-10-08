@@ -9,11 +9,16 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 import io.github.authzfuzzer.api.ResourceDto;
+import io.github.authzfuzzer.api.ResourceRequest;
 import io.github.authzfuzzer.domain.Resource;
 import io.github.authzfuzzer.domain.ResourceRepository;
 import io.github.authzfuzzer.domain.Tenant;
 import io.github.authzfuzzer.domain.TenantRepository;
 
+/**
+ * Service behaviour against a real (in-memory H2) JPA layer. @DataJpaTest rolls back after
+ * each test and does not run SeedData, so every test builds exactly the rows it needs.
+ */
 @DataJpaTest
 @Import(ResourceService.class)
 class ResourceServiceTest {
@@ -33,6 +38,10 @@ class ResourceServiceTest {
 
     Resource resource(String name, Tenant owner) {
         return resources.save(new Resource(name, "content of " + name, owner));
+    }
+
+    static ResourceRequest request(String name, String content) {
+        return new ResourceRequest(name, content);
     }
 
     @Test
@@ -66,7 +75,7 @@ class ResourceServiceTest {
     @Test
     void createStoresResourceUnderTheGivenTenant() {
         Tenant a = tenant("alpha");
-        ResourceDto dto = service.create(a.getId(), new io.github.authzfuzzer.api.ResourceRequest("plan", "q3"));
+        ResourceDto dto = service.create(a.getId(), request("plan", "q3"));
         assertThat(dto.id()).isNotNull();
         assertThat(dto.tenant()).isEqualTo("alpha");
         assertThat(service.list(a.getId())).extracting(ResourceDto::name).containsExactly("plan");
@@ -74,14 +83,14 @@ class ResourceServiceTest {
 
     @Test
     void createForUnknownTenantThrowsNotFound() {
-        assertThatThrownBy(() -> service.create(999L, new io.github.authzfuzzer.api.ResourceRequest("x", "y")))
+        assertThatThrownBy(() -> service.create(999L, request("x", "y")))
                 .isInstanceOf(NotFoundException.class);
     }
 
     @Test
     void updateChangesNameAndContentButNotOwner() {
         Resource r = resource("a1", tenant("alpha"));
-        ResourceDto dto = service.update(r.getId(), new io.github.authzfuzzer.api.ResourceRequest("a1-v2", "new"));
+        ResourceDto dto = service.update(r.getId(), request("a1-v2", "new"));
         assertThat(dto.name()).isEqualTo("a1-v2");
         assertThat(dto.content()).isEqualTo("new");
         assertThat(dto.tenant()).isEqualTo("alpha");
@@ -90,7 +99,7 @@ class ResourceServiceTest {
 
     @Test
     void updateUnknownIdThrowsNotFound() {
-        assertThatThrownBy(() -> service.update(4242L, new io.github.authzfuzzer.api.ResourceRequest("x", "y")))
+        assertThatThrownBy(() -> service.update(4242L, request("x", "y")))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -104,5 +113,21 @@ class ResourceServiceTest {
     @Test
     void deleteUnknownIdThrowsNotFound() {
         assertThatThrownBy(() -> service.delete(777L)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void updateDoesNotTouchOtherTenantsRowWithSameName() {
+        Resource mine = resource("shared-name", tenant("alpha"));
+        Resource theirs = resource("shared-name", tenant("bravo"));
+        service.update(mine.getId(), request("renamed", "x"));
+        assertThat(service.get(theirs.getId()).name()).isEqualTo("shared-name");
+    }
+
+    @Test
+    void createdIdsAreUnique() {
+        Tenant a = tenant("alpha");
+        long first = service.create(a.getId(), request("one", "1")).id();
+        long second = service.create(a.getId(), request("two", "2")).id();
+        assertThat(first).isNotEqualTo(second);
     }
 }
