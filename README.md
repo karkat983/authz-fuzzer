@@ -28,4 +28,4 @@ Multi-tenant APIs often check *what* a user may do (their role) but forget to ch
 No external data; all users and resources are synthetic seed data. Not affiliated with any employer. Built October 2026.
 
 ## Changelog
-- Day 1: project scaffold.
+- Day 1: project scaffold and changelog.
