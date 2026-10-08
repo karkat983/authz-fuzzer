@@ -70,4 +70,14 @@ class SeedDataTest {
         assertThat(resources.count()).isEqualTo(before);
         assertThat(tenants.count()).isEqualTo(SeedData.TENANTS.size());
     }
+
+    @Test
+    void resourceIdsFollowTheDocumentedLayout() {
+        // docs/seed.md: alpha owns 1-3, bravo 4-6, charlie 7-9
+        for (long id = 1; id <= 9; id++) {
+            String expectedTenant = SeedData.TENANTS.get((int) ((id - 1) / SeedData.RESOURCES_PER_TENANT));
+            assertThat(resources.findById(id))
+                    .hasValueSatisfying(r -> assertThat(r.getTenant().getName()).isEqualTo(expectedTenant));
+        }
+    }
 }
