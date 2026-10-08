@@ -13,13 +13,14 @@ import org.springframework.context.annotation.Import;
 import io.github.authzfuzzer.domain.AppUserRepository;
 import io.github.authzfuzzer.domain.ResourceRepository;
 import io.github.authzfuzzer.domain.TenantRepository;
+import io.github.authzfuzzer.security.PasswordConfig;
 
 /**
  * Seeds an empty database and compares the result with a fixed snapshot. The property tests rely
  * on knowing every user and resource in advance, so the seed must never drift silently.
  */
 @DataJpaTest(showSql = false)
-@Import(SeedData.class)
+@Import({SeedData.class, PasswordConfig.class})
 class SeedDeterminismTest {
 
     @Autowired

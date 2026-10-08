@@ -21,6 +21,9 @@ One user per role in each tenant, named `{tenant}-{role}`:
 | bravo | bravo-viewer | bravo-editor | bravo-admin |
 | charlie | charlie-viewer | charlie-editor | charlie-admin |
 
+Every account's password is `seed-password` (stored as a BCrypt hash). These are synthetic
+users on an in-memory database; never reuse this pattern for real accounts.
+
 What each role may do is defined in the RBAC phase (`docs/authz-model.md`, planned).
 
 ## Resources
