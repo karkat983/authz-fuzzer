@@ -17,7 +17,6 @@ import io.github.authzfuzzer.domain.Tenant;
 import io.github.authzfuzzer.domain.TenantRepository;
 import io.github.authzfuzzer.security.AppUserPrincipal;
 import io.github.authzfuzzer.security.AuthorizationService;
-import io.github.authzfuzzer.security.CrossTenantException;
 
 /**
  * Service behaviour against a real (in-memory H2) JPA layer. @DataJpaTest rolls back after each
@@ -116,10 +115,20 @@ class ResourceServiceTest {
         Resource theirs = resource("secret", tenant("bravo"));
         AppUserPrincipal me = admin(tenant("alpha"));
         Long id = theirs.getId();
-        assertThatThrownBy(() -> service.get(me, id)).isInstanceOf(CrossTenantException.class);
-        assertThatThrownBy(() -> service.update(me, id, request("x", "y"))).isInstanceOf(CrossTenantException.class);
-        assertThatThrownBy(() -> service.delete(me, id)).isInstanceOf(CrossTenantException.class);
+        // the scoped query finds nothing, so the caller sees "not found", exactly as for a missing ID
+        assertThatThrownBy(() -> service.get(me, id)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.update(me, id, request("x", "y"))).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.delete(me, id)).isInstanceOf(NotFoundException.class);
         assertThat(resources.findById(id))
                 .hasValueSatisfying(r -> assertThat(r.getName()).isEqualTo("secret"));
+    }
+
+    @Test
+    void scopedQueryFindsOnlyOwnTenant() {
+        Tenant a = tenant("alpha");
+        Tenant b = tenant("bravo");
+        Resource r = resource("a1", a);
+        assertThat(resources.findByIdAndTenantId(r.getId(), a.getId())).isPresent();
+        assertThat(resources.findByIdAndTenantId(r.getId(), b.getId())).isEmpty();
     }
 }

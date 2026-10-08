@@ -73,9 +73,15 @@ public class ResourceService {
         resources.delete(owned(caller, id));
     }
 
-    /** Load a resource and enforce tenant ownership; missing and foreign both end in a 404. */
+    /**
+     * Load a resource of the caller's tenant. Two layers: the query itself is tenant-scoped, and
+     * the loaded object is checked again, so one forgotten filter cannot leak data on its own.
+     * Missing and foreign objects both end in the same 404.
+     */
     private Resource owned(AppUserPrincipal caller, Long id) {
-        Resource r = resources.findById(id).orElseThrow(() -> new NotFoundException("resource", id));
+        Resource r = resources
+                .findByIdAndTenantId(id, caller.tenantId())
+                .orElseThrow(() -> new NotFoundException("resource", id));
         authz.checkTenant(caller, r);
         return r;
     }
