@@ -1,5 +1,7 @@
 package io.github.authzfuzzer.domain;
 
+import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -8,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
@@ -33,6 +36,9 @@ public class Resource {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt;
+
     protected Resource() {
         // for JPA
     }
@@ -57,6 +63,15 @@ public class Resource {
 
     public Tenant getTenant() {
         return tenant;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    @PrePersist
+    void onCreate() {
+        createdAt = Instant.now();
     }
 
     public void rename(String name) {
