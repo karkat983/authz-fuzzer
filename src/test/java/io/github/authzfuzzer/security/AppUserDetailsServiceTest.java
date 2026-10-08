@@ -25,4 +25,13 @@ class AppUserDetailsServiceTest {
     void unknownUserIsRejected() {
         assertThatThrownBy(() -> service.loadUserByUsername("nobody")).isInstanceOf(UsernameNotFoundException.class);
     }
+
+    @Test
+    void principalCarriesTenantAndRole() {
+        AppUserPrincipal p = service.loadUserByUsername("charlie-viewer");
+        assertThat(p.tenantName()).isEqualTo("charlie");
+        assertThat(p.tenantId()).isNotNull();
+        assertThat(p.role()).isEqualTo(io.github.authzfuzzer.domain.Role.VIEWER);
+        assertThat(p.toString()).doesNotContain("$2a$");
+    }
 }
