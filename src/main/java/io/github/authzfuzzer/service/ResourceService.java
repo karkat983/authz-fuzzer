@@ -30,4 +30,10 @@ public class ResourceService {
     public List<ResourceDto> list(Long tenantId) {
         return resources.findAllByTenantIdOrderByIdAsc(tenantId).stream().map(ResourceMapper::toDto).toList();
     }
+
+    /** One resource by ID. Tenant checks are added by the authorization layer. */
+    public ResourceDto get(Long id) {
+        return resources.findById(id).map(ResourceMapper::toDto)
+                .orElseThrow(() -> new NotFoundException("resource", id));
+    }
 }

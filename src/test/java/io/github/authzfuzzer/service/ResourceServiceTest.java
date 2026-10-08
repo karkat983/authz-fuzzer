@@ -1,6 +1,7 @@
 package io.github.authzfuzzer.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,5 +48,18 @@ class ResourceServiceTest {
     @Test
     void listOfUnknownTenantIsEmpty() {
         assertThat(service.list(999L)).isEmpty();
+    }
+
+    @Test
+    void getReturnsTheResource() {
+        Resource r = resource("a1", tenant("alpha"));
+        ResourceDto dto = service.get(r.getId());
+        assertThat(dto.name()).isEqualTo("a1");
+        assertThat(dto.tenant()).isEqualTo("alpha");
+    }
+
+    @Test
+    void getUnknownIdThrowsNotFound() {
+        assertThatThrownBy(() -> service.get(12345L)).isInstanceOf(NotFoundException.class);
     }
 }
