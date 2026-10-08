@@ -1,0 +1,51 @@
+package io.github.authzfuzzer.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+
+import io.github.authzfuzzer.api.ResourceDto;
+import io.github.authzfuzzer.domain.Resource;
+import io.github.authzfuzzer.domain.ResourceRepository;
+import io.github.authzfuzzer.domain.Tenant;
+import io.github.authzfuzzer.domain.TenantRepository;
+
+@DataJpaTest
+@Import(ResourceService.class)
+class ResourceServiceTest {
+
+    @Autowired
+    ResourceService service;
+
+    @Autowired
+    TenantRepository tenants;
+
+    @Autowired
+    ResourceRepository resources;
+
+    Tenant tenant(String name) {
+        return tenants.save(new Tenant(name));
+    }
+
+    Resource resource(String name, Tenant owner) {
+        return resources.save(new Resource(name, "content of " + name, owner));
+    }
+
+    @Test
+    void listReturnsOnlyTheTenantsResourcesInIdOrder() {
+        Tenant a = tenant("alpha");
+        Tenant b = tenant("bravo");
+        resource("a1", a);
+        resource("b1", b);
+        resource("a2", a);
+        assertThat(service.list(a.getId())).extracting(ResourceDto::name).containsExactly("a1", "a2");
+    }
+
+    @Test
+    void listOfUnknownTenantIsEmpty() {
+        assertThat(service.list(999L)).isEmpty();
+    }
+}

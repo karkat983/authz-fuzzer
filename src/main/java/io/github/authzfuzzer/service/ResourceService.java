@@ -1,8 +1,12 @@
 package io.github.authzfuzzer.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.github.authzfuzzer.api.ResourceDto;
+import io.github.authzfuzzer.api.ResourceMapper;
 import io.github.authzfuzzer.domain.ResourceRepository;
 import io.github.authzfuzzer.domain.TenantRepository;
 
@@ -20,5 +24,10 @@ public class ResourceService {
     public ResourceService(ResourceRepository resources, TenantRepository tenants) {
         this.resources = resources;
         this.tenants = tenants;
+    }
+
+    /** All resources owned by the tenant, oldest first. */
+    public List<ResourceDto> list(Long tenantId) {
+        return resources.findAllByTenantIdOrderByIdAsc(tenantId).stream().map(ResourceMapper::toDto).toList();
     }
 }
