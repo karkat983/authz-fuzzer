@@ -77,4 +77,20 @@ class ResourceServiceTest {
         assertThatThrownBy(() -> service.create(999L, new io.github.authzfuzzer.api.ResourceRequest("x", "y")))
                 .isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void updateChangesNameAndContentButNotOwner() {
+        Resource r = resource("a1", tenant("alpha"));
+        ResourceDto dto = service.update(r.getId(), new io.github.authzfuzzer.api.ResourceRequest("a1-v2", "new"));
+        assertThat(dto.name()).isEqualTo("a1-v2");
+        assertThat(dto.content()).isEqualTo("new");
+        assertThat(dto.tenant()).isEqualTo("alpha");
+        assertThat(dto.createdAt()).isEqualTo(service.get(r.getId()).createdAt());
+    }
+
+    @Test
+    void updateUnknownIdThrowsNotFound() {
+        assertThatThrownBy(() -> service.update(4242L, new io.github.authzfuzzer.api.ResourceRequest("x", "y")))
+                .isInstanceOf(NotFoundException.class);
+    }
 }

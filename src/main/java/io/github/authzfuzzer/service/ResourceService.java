@@ -47,4 +47,13 @@ public class ResourceService {
         Resource saved = resources.save(ResourceMapper.toEntity(request, owner));
         return ResourceMapper.toDto(saved);
     }
+
+    /** Replace name and content. The owning tenant can never change through an update. */
+    @Transactional
+    public ResourceDto update(Long id, ResourceRequest request) {
+        Resource r = resources.findById(id).orElseThrow(() -> new NotFoundException("resource", id));
+        r.rename(request.name());
+        r.updateContent(request.content());
+        return ResourceMapper.toDto(resources.saveAndFlush(r));
+    }
 }
