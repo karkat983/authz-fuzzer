@@ -36,6 +36,10 @@ public class AppUser {
     @NotNull
     private Role role;
 
+    /** Encoded password. "!" can never match an encoded password, so the account starts locked. */
+    @Column(nullable = false)
+    private String passwordHash = "!";
+
     protected AppUser() {
         // for JPA
     }
@@ -60,5 +64,13 @@ public class AppUser {
 
     public Role getRole() {
         return role;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 }
