@@ -3,6 +3,7 @@ package io.github.authzfuzzer.examples;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,5 +51,16 @@ class HandWrittenAuthzExamplesTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(BODY))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void editorUpdatesOwnTenantResource() throws Exception {
+        mvc.perform(put("/api/resources/2")
+                        .with(as("alpha-editor"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("example"))
+                .andExpect(jsonPath("$.tenant").value("alpha"));
     }
 }
