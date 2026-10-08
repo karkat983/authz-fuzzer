@@ -13,6 +13,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /** A record owned by one tenant. This is the object the authorization tests try to reach across tenants. */
 @Entity
@@ -26,10 +28,17 @@ public class Resource {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    public static final int MAX_NAME = 200;
+    public static final int MAX_CONTENT = 4000;
+
+    @Column(nullable = false, length = MAX_NAME)
+    @NotBlank
+    @Size(max = MAX_NAME)
     private String name;
 
-    @Column(nullable = false, length = 4000)
+    @Column(nullable = false, length = MAX_CONTENT)
+    @NotBlank
+    @Size(max = MAX_CONTENT)
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
