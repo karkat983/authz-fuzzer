@@ -19,7 +19,13 @@ Multi-tenant APIs often check *what* a user may do (their role) but forget to ch
 | C++ fuzzer: crashes found in parser | — |
 
 ## Run it
-*Planned.*
+Requires JDK 17+ and Maven.
+```bash
+mvn test                 # context-load and seed-data tests
+mvn spring-boot:run      # starts the service on :8080 with seeded H2 data
+```
+Day 1 check: `mvn test` passes (5 tests) on OpenJDK 17.0.20 with Maven. Commit 010 adds the Maven wrapper so Maven need not be installed.
+REST endpoints, RBAC and the jqwik properties are *planned*.
 
 ## What I learned
 *Planned.*
