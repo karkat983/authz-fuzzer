@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -89,5 +90,11 @@ class ResourceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("charlie-doc-1-v2"))
                 .andExpect(jsonPath("$.tenant").value("charlie"));
+    }
+
+    @Test
+    void deleteOwnResourceThenItIsGone() throws Exception {
+        mvc.perform(delete("/api/resources/1").with(as("alpha-admin"))).andExpect(status().isNoContent());
+        mvc.perform(get("/api/resources/1").with(as("alpha-admin"))).andExpect(status().isNotFound());
     }
 }
