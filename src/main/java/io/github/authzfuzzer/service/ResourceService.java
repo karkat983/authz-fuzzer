@@ -56,4 +56,10 @@ public class ResourceService {
         r.updateContent(request.content());
         return ResourceMapper.toDto(resources.saveAndFlush(r));
     }
+
+    @Transactional
+    public void delete(Long id) {
+        Resource r = resources.findById(id).orElseThrow(() -> new NotFoundException("resource", id));
+        resources.delete(r);
+    }
 }

@@ -93,4 +93,16 @@ class ResourceServiceTest {
         assertThatThrownBy(() -> service.update(4242L, new io.github.authzfuzzer.api.ResourceRequest("x", "y")))
                 .isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void deleteRemovesTheResource() {
+        Resource r = resource("a1", tenant("alpha"));
+        service.delete(r.getId());
+        assertThat(resources.findById(r.getId())).isEmpty();
+    }
+
+    @Test
+    void deleteUnknownIdThrowsNotFound() {
+        assertThatThrownBy(() -> service.delete(777L)).isInstanceOf(NotFoundException.class);
+    }
 }
