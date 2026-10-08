@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,5 +25,11 @@ public class ResourceController {
     @GetMapping
     List<ResourceDto> list(@AuthenticationPrincipal AppUserPrincipal caller) {
         return service.list(caller.tenantId());
+    }
+
+    // Authorization (tenant + permission) is added for every endpoint in the RBAC commits 053-054.
+    @GetMapping("/{id}")
+    ResourceDto get(@AuthenticationPrincipal AppUserPrincipal caller, @PathVariable Long id) {
+        return service.get(id);
     }
 }

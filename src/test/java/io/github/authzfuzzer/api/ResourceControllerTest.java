@@ -38,4 +38,17 @@ class ResourceControllerTest {
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[*].tenant", everyItem(is("bravo"))));
     }
+
+    @Test
+    void getOwnResource() throws Exception {
+        mvc.perform(get("/api/resources/4").with(as("bravo-viewer")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("bravo-doc-1"))
+                .andExpect(jsonPath("$.tenant").value("bravo"));
+    }
+
+    @Test
+    void getUnknownIdIs404() throws Exception {
+        mvc.perform(get("/api/resources/99999").with(as("bravo-viewer"))).andExpect(status().isNotFound());
+    }
 }
