@@ -23,8 +23,13 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ProblemDetail invalid(MethodArgumentNotValidException e) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request body");
-        problem.setProperty("fields", e.getBindingResult().getFieldErrors().stream()
-                .map(err -> err.getField()).distinct().sorted().toList());
+        problem.setProperty(
+                "fields",
+                e.getBindingResult().getFieldErrors().stream()
+                        .map(err -> err.getField())
+                        .distinct()
+                        .sorted()
+                        .toList());
         return problem;
     }
 }

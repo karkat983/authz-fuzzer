@@ -47,9 +47,7 @@ public class SeedData implements CommandLineRunner {
             }
             for (int i = 1; i <= RESOURCES_PER_TENANT; i++) {
                 resources.save(new Resource(
-                        name + "-doc-" + i,
-                        "Confidential note " + i + " belonging to tenant " + name,
-                        tenant));
+                        name + "-doc-" + i, "Confidential note " + i + " belonging to tenant " + name, tenant));
             }
         }
     }

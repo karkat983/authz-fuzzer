@@ -31,12 +31,16 @@ public class ResourceService {
 
     /** All resources owned by the tenant, oldest first. */
     public List<ResourceDto> list(Long tenantId) {
-        return resources.findAllByTenantIdOrderByIdAsc(tenantId).stream().map(ResourceMapper::toDto).toList();
+        return resources.findAllByTenantIdOrderByIdAsc(tenantId).stream()
+                .map(ResourceMapper::toDto)
+                .toList();
     }
 
     /** One resource by ID. Tenant checks are added by the authorization layer. */
     public ResourceDto get(Long id) {
-        return resources.findById(id).map(ResourceMapper::toDto)
+        return resources
+                .findById(id)
+                .map(ResourceMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("resource", id));
     }
 

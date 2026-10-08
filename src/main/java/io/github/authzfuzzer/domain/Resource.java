@@ -20,8 +20,10 @@ import jakarta.validation.constraints.Size;
 @Entity
 @Table(
         name = "resource_item",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_resource_tenant_name", columnNames = {"tenant_id", "name"}))
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uk_resource_tenant_name",
+                        columnNames = {"tenant_id", "name"}))
 public class Resource {
 
     @Id

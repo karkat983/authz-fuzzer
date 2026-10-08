@@ -83,8 +83,7 @@ class ResourceServiceTest {
 
     @Test
     void createForUnknownTenantThrowsNotFound() {
-        assertThatThrownBy(() -> service.create(999L, request("x", "y")))
-                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.create(999L, request("x", "y"))).isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -99,8 +98,7 @@ class ResourceServiceTest {
 
     @Test
     void updateUnknownIdThrowsNotFound() {
-        assertThatThrownBy(() -> service.update(4242L, request("x", "y")))
-                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.update(4242L, request("x", "y"))).isInstanceOf(NotFoundException.class);
     }
 
     @Test

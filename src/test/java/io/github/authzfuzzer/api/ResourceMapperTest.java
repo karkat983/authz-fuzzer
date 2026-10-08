@@ -16,7 +16,7 @@ class ResourceMapperTest {
         assertThat(dto.name()).isEqualTo("doc-1");
         assertThat(dto.content()).isEqualTo("secret text");
         assertThat(dto.tenant()).isEqualTo("alpha");
-        assertThat(dto.id()).isNull();          // not persisted yet
+        assertThat(dto.id()).isNull(); // not persisted yet
     }
 
     @Test

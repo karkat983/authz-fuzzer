@@ -2,13 +2,13 @@ package io.github.authzfuzzer.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 class EntityValidationTest {
 
@@ -30,7 +30,8 @@ class EntityValidationTest {
     void validEntitiesPass() {
         Tenant t = new Tenant("alpha");
         assertThat(validator.validate(t)).isEmpty();
-        assertThat(validator.validate(new AppUser("alpha-admin", t, Role.ADMIN))).isEmpty();
+        assertThat(validator.validate(new AppUser("alpha-admin", t, Role.ADMIN)))
+                .isEmpty();
         assertThat(validator.validate(new Resource("doc", "text", t))).isEmpty();
     }
 
@@ -51,6 +52,7 @@ class EntityValidationTest {
     void resourceTextIsBounded() {
         Tenant t = new Tenant("alpha");
         assertThat(validator.validate(new Resource(" ", "text", t))).isNotEmpty();
-        assertThat(validator.validate(new Resource("doc", "x".repeat(Resource.MAX_CONTENT + 1), t))).isNotEmpty();
+        assertThat(validator.validate(new Resource("doc", "x".repeat(Resource.MAX_CONTENT + 1), t)))
+                .isNotEmpty();
     }
 }

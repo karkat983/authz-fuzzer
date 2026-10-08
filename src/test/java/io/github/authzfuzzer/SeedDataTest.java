@@ -40,9 +40,7 @@ class SeedDataTest {
 
     @Test
     void seedsThreeTenants() {
-        assertThat(tenants.findAll())
-                .extracting(Tenant::getName)
-                .containsExactlyInAnyOrderElementsOf(SeedData.TENANTS);
+        assertThat(tenants.findAll()).extracting(Tenant::getName).containsExactlyInAnyOrderElementsOf(SeedData.TENANTS);
     }
 
     @Test
