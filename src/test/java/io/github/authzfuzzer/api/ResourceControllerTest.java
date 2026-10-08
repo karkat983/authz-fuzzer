@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -77,5 +78,16 @@ class ResourceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("", "x")))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateOwnResource() throws Exception {
+        mvc.perform(put("/api/resources/7")
+                        .with(as("charlie-editor"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body("charlie-doc-1-v2", "revised")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("charlie-doc-1-v2"))
+                .andExpect(jsonPath("$.tenant").value("charlie"));
     }
 }

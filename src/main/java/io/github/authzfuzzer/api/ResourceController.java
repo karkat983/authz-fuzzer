@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,5 +46,13 @@ public class ResourceController {
         ResourceDto created = service.create(caller.tenantId(), request);
         return ResponseEntity.created(URI.create("/api/resources/" + created.id()))
                 .body(created);
+    }
+
+    @PutMapping("/{id}")
+    ResourceDto update(
+            @AuthenticationPrincipal AppUserPrincipal caller,
+            @PathVariable Long id,
+            @Valid @RequestBody ResourceRequest request) {
+        return service.update(id, request);
     }
 }
