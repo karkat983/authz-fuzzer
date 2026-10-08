@@ -41,4 +41,10 @@ REST endpoints, RBAC and the jqwik properties are *planned*.
 No external data; all users and resources are synthetic seed data. Not affiliated with any employer. Built October 2026.
 
 ## Changelog
-- Day 1: project scaffold and changelog.
+- Day 1: project scaffold and changelog; entities and seed data.
+- Maven wrapper; build verified on JDK 17 (docs/build.md).
+- Per-tenant unique resource names, `createdAt`, Bean Validation on entities.
+- DTOs (`ResourceDto`, `ResourceRequest`) so entities never leave the service layer.
+- `ResourceService` with list / get / create / update / delete and JPA tests.
+- Problem-JSON error handler: generic 404s that never echo IDs or tenant names.
+- Quiet logging config for app and tests.
