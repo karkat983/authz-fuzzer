@@ -112,4 +112,24 @@ class ResourceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("alpha-doc-1"));
     }
+
+    @Test
+    void viewerCannotWriteInOwnTenant() throws Exception {
+        mvc.perform(post("/api/resources")
+                        .with(as("alpha-viewer"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body("x", "y")))
+                .andExpect(status().isForbidden());
+        mvc.perform(put("/api/resources/1")
+                        .with(as("alpha-viewer"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body("x", "y")))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/resources/1").with(as("alpha-viewer"))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void editorCannotDelete() throws Exception {
+        mvc.perform(delete("/api/resources/1").with(as("alpha-editor"))).andExpect(status().isForbidden());
+    }
 }

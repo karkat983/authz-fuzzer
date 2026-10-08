@@ -14,10 +14,12 @@ import io.github.authzfuzzer.domain.Tenant;
 import io.github.authzfuzzer.domain.TenantRepository;
 import io.github.authzfuzzer.security.AppUserPrincipal;
 import io.github.authzfuzzer.security.AuthorizationService;
+import io.github.authzfuzzer.security.Permission;
 
 /**
- * CRUD on resources for an authenticated caller. Every method that takes an ID loads the object
- * and checks it belongs to the caller's tenant before doing anything else.
+ * CRUD on resources for an authenticated caller. Every method first checks the caller's role
+ * grants the permission (else 403), then, for ID-based methods, that the object belongs to the
+ * caller's tenant (else the same 404 as a missing object).
  */
 @Service
 @Transactional(readOnly = true)
@@ -35,18 +37,21 @@ public class ResourceService {
 
     /** All resources owned by the caller's tenant, oldest first. */
     public List<ResourceDto> list(AppUserPrincipal caller) {
+        authz.check(caller, Permission.READ);
         return resources.findAllByTenantIdOrderByIdAsc(caller.tenantId()).stream()
                 .map(ResourceMapper::toDto)
                 .toList();
     }
 
     public ResourceDto get(AppUserPrincipal caller, Long id) {
+        authz.check(caller, Permission.READ);
         return ResourceMapper.toDto(owned(caller, id));
     }
 
     /** Create a resource owned by the caller's tenant (never a tenant named in the body). */
     @Transactional
     public ResourceDto create(AppUserPrincipal caller, ResourceRequest request) {
+        authz.check(caller, Permission.CREATE);
         Tenant owner = tenants.findById(caller.tenantId())
                 .orElseThrow(() -> new NotFoundException("tenant", caller.tenantId()));
         return ResourceMapper.toDto(resources.save(ResourceMapper.toEntity(request, owner)));
@@ -55,6 +60,7 @@ public class ResourceService {
     /** Replace name and content. The owning tenant can never change through an update. */
     @Transactional
     public ResourceDto update(AppUserPrincipal caller, Long id, ResourceRequest request) {
+        authz.check(caller, Permission.UPDATE);
         Resource r = owned(caller, id);
         r.rename(request.name());
         r.updateContent(request.content());
@@ -63,6 +69,7 @@ public class ResourceService {
 
     @Transactional
     public void delete(AppUserPrincipal caller, Long id) {
+        authz.check(caller, Permission.DELETE);
         resources.delete(owned(caller, id));
     }
 
