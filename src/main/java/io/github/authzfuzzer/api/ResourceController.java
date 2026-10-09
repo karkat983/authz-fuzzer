@@ -74,4 +74,11 @@ public class ResourceController {
         return ResponseEntity.created(URI.create("/api/resources/" + id + "/shares/" + grant.tenant()))
                 .body(grant);
     }
+
+    @DeleteMapping("/{id}/shares/{tenant}")
+    ResponseEntity<Void> revoke(
+            @AuthenticationPrincipal AppUserPrincipal caller, @PathVariable Long id, @PathVariable String tenant) {
+        shares.revoke(caller, id, tenant);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -50,4 +50,16 @@ public class ShareService {
         }
         return new ShareDto(r.getId(), grantee.getName());
     }
+
+    /** Remove `tenantName`'s access to the caller's resource; 404 if there was no such grant. */
+    public void revoke(AppUserPrincipal caller, Long resourceId, String tenantName) {
+        authz.check(caller, Permission.SHARE);
+        Resource r = resources
+                .findByIdAndTenantId(resourceId, caller.tenantId())
+                .orElseThrow(() -> new NotFoundException("resource", resourceId));
+        Tenant grantee = tenants.findByName(tenantName).orElseThrow(() -> new NotFoundException("tenant", tenantName));
+        ShareGrant grant = shares.findByResourceIdAndGranteeId(r.getId(), grantee.getId())
+                .orElseThrow(() -> new NotFoundException("share", tenantName));
+        shares.delete(grant);
+    }
 }

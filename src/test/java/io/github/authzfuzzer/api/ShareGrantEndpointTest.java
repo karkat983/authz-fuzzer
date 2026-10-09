@@ -1,6 +1,7 @@
 package io.github.authzfuzzer.api;
 
 import static io.github.authzfuzzer.support.Api.as;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,5 +53,21 @@ class ShareGrantEndpointTest {
     void cannotShareWithOwnTenantOrUnknownTenant() throws Exception {
         share("alpha-admin", 1, "alpha").andExpect(status().isBadRequest());
         share("alpha-admin", 1, "zulu").andExpect(status().isNotFound());
+    }
+
+    @Test
+    void ownerAdminRevokesAGrant() throws Exception {
+        share("alpha-admin", 1, "bravo").andExpect(status().isCreated());
+        mvc.perform(delete("/api/resources/1/shares/bravo").with(as("alpha-admin")))
+                .andExpect(status().isNoContent());
+        mvc.perform(delete("/api/resources/1/shares/bravo").with(as("alpha-admin")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void granteeCannotRevokeItself() throws Exception {
+        share("alpha-admin", 1, "bravo").andExpect(status().isCreated());
+        mvc.perform(delete("/api/resources/1/shares/bravo").with(as("bravo-admin")))
+                .andExpect(status().isNotFound());
     }
 }
