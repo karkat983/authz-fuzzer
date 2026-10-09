@@ -1,5 +1,9 @@
 package io.github.authzfuzzer.examples;
 
+import static io.github.authzfuzzer.support.Api.as;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -66,5 +70,12 @@ class HandWrittenAuthzExamplesTest {
     @Test
     void unauthenticatedGets401() throws Exception {
         api.get(null, 1).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminCannotListOtherTenantsUsers() throws Exception {
+        mvc.perform(get("/api/users").with(as("bravo-admin")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].tenant", everyItem(is("bravo"))));
     }
 }
