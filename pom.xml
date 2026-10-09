@@ -19,6 +19,7 @@
 
     <properties>
         <java.version>17</java.version>
+        <jqwik.version>1.9.3</jqwik.version>
     </properties>
 
     <dependencies>
@@ -52,6 +53,19 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Property-based testing: generates many (user, resource, verb) cases per property. -->
+        <dependency>
+            <groupId>net.jqwik</groupId>
+            <artifactId>jqwik</artifactId>
+            <version>${jqwik.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.jqwik</groupId>
+            <artifactId>jqwik-spring</artifactId>
+            <version>0.12.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
