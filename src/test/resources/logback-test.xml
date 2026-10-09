@@ -7,6 +7,8 @@
     </appender>
     <logger name="org.hibernate.engine.jdbc.spi.SqlExceptionHelper" level="OFF"/>
     <logger name="io.github.authzfuzzer" level="INFO"/>
+    <!-- denials are expected in authorization tests; the audit test reads AuditLog directly -->
+    <logger name="authz.audit" level="OFF"/>
     <root level="WARN">
         <appender-ref ref="CONSOLE"/>
     </root>

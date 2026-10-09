@@ -25,7 +25,7 @@ import io.github.authzfuzzer.security.AuthorizationService;
  * test and does not run SeedData, so every test builds exactly the rows it needs.
  */
 @DataJpaTest(showSql = false)
-@Import({ResourceService.class, AuthorizationService.class})
+@Import({ResourceService.class, AuthorizationService.class, io.github.authzfuzzer.security.AuditLog.class})
 class ResourceServiceTest {
 
     @Autowired

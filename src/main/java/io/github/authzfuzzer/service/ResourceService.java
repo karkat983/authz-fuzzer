@@ -58,7 +58,7 @@ public class ResourceService {
                 .findByIdAndTenantId(id, caller.tenantId())
                 .or(() -> shares.findByResourceIdAndGranteeId(id, caller.tenantId())
                         .map(g -> g.getResource()))
-                .orElseThrow(() -> new NotFoundException("resource", id));
+                .orElseThrow(() -> notFound(caller, "READ", id));
         authz.checkReadable(caller, r, shares.existsByResourceIdAndGranteeId(id, caller.tenantId()));
         return ResourceMapper.toDto(r);
     }
@@ -96,10 +96,15 @@ public class ResourceService {
      * Missing and foreign objects both end in the same 404.
      */
     private Resource owned(AppUserPrincipal caller, Long id) {
-        Resource r = resources
-                .findByIdAndTenantId(id, caller.tenantId())
-                .orElseThrow(() -> new NotFoundException("resource", id));
+        Resource r =
+                resources.findByIdAndTenantId(id, caller.tenantId()).orElseThrow(() -> notFound(caller, "WRITE", id));
         authz.checkTenant(caller, r);
         return r;
+    }
+
+    /** The generic 404; audited as a cross-tenant probe if the ID exists in another tenant. */
+    private NotFoundException notFound(AppUserPrincipal caller, String action, Long id) {
+        authz.auditIfForeign(caller, action, id, resources.existsById(id));
+        return new NotFoundException("resource", id);
     }
 }

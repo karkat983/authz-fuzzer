@@ -9,7 +9,7 @@ import io.github.authzfuzzer.domain.Role;
 
 class AuthorizationServiceTest {
 
-    AuthorizationService authz = new AuthorizationService();
+    AuthorizationService authz = new AuthorizationService(new AuditLog());
 
     static AppUserPrincipal caller(Role role) {
         return new AppUserPrincipal(1L, "alpha-" + role.name().toLowerCase(), "!", 1L, "alpha", role);

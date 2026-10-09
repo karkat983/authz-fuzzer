@@ -8,9 +8,16 @@ import io.github.authzfuzzer.domain.Resource;
 @Service
 public class AuthorizationService {
 
+    private final AuditLog audit;
+
+    public AuthorizationService(AuditLog audit) {
+        this.audit = audit;
+    }
+
     /** Throws ForbiddenException unless the caller's role grants the permission. */
     public void check(AppUserPrincipal caller, Permission permission) {
         if (!RolePermissions.allows(caller.role(), permission)) {
+            audit.denied(caller, permission.name(), null, AuditLog.Reason.ROLE_LACKS_PERMISSION);
             throw new ForbiddenException(caller.username(), permission);
         }
     }
@@ -21,6 +28,7 @@ public class AuthorizationService {
      */
     public void checkTenant(AppUserPrincipal caller, Resource resource) {
         if (!caller.tenantId().equals(resource.getTenant().getId())) {
+            audit.denied(caller, "ACCESS", resource.getId(), AuditLog.Reason.CROSS_TENANT_ACCESS);
             throw new CrossTenantException(caller.username(), resource.getId());
         }
     }
@@ -29,6 +37,16 @@ public class AuthorizationService {
     public void checkReadable(AppUserPrincipal caller, Resource resource, boolean sharedWithCaller) {
         if (!sharedWithCaller) {
             checkTenant(caller, resource);
+        }
+    }
+
+    /**
+     * Called when a tenant-scoped lookup found nothing. If the ID exists in another tenant, the
+     * caller probed someone else's object: audit it. The caller still gets the generic 404.
+     */
+    public void auditIfForeign(AppUserPrincipal caller, String action, Long resourceId, boolean existsElsewhere) {
+        if (existsElsewhere) {
+            audit.denied(caller, action, resourceId, AuditLog.Reason.CROSS_TENANT_ACCESS);
         }
     }
 }
