@@ -20,7 +20,8 @@ import io.github.authzfuzzer.security.Permission;
 /**
  * CRUD on resources for an authenticated caller. Every method first checks the caller's role
  * grants the permission (else 403), then, for ID-based methods, that the object belongs to the
- * caller's tenant (else the same 404 as a missing object).
+ * caller's tenant (else the same 404 as a missing object). Reads also honour share grants;
+ * writes never do.
  */
 @Service
 @Transactional(readOnly = true)
@@ -50,9 +51,16 @@ public class ResourceService {
                 .toList();
     }
 
+    /** Readable = owned by the caller's tenant, or shared with it by the owner (read-only). */
     public ResourceDto get(AppUserPrincipal caller, Long id) {
         authz.check(caller, Permission.READ);
-        return ResourceMapper.toDto(owned(caller, id));
+        Resource r = resources
+                .findByIdAndTenantId(id, caller.tenantId())
+                .or(() -> shares.findByResourceIdAndGranteeId(id, caller.tenantId())
+                        .map(g -> g.getResource()))
+                .orElseThrow(() -> new NotFoundException("resource", id));
+        authz.checkReadable(caller, r, shares.existsByResourceIdAndGranteeId(id, caller.tenantId()));
+        return ResourceMapper.toDto(r);
     }
 
     /** Create a resource owned by the caller's tenant (never a tenant named in the body). */

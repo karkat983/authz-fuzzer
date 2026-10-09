@@ -24,4 +24,11 @@ public class AuthorizationService {
             throw new CrossTenantException(caller.username(), resource.getId());
         }
     }
+
+    /** Read access: own tenant, or a share grant from the owner to the caller's tenant. */
+    public void checkReadable(AppUserPrincipal caller, Resource resource, boolean sharedWithCaller) {
+        if (!sharedWithCaller) {
+            checkTenant(caller, resource);
+        }
+    }
 }

@@ -13,6 +13,8 @@ import io.github.authzfuzzer.api.ResourceRequest;
 import io.github.authzfuzzer.domain.Resource;
 import io.github.authzfuzzer.domain.ResourceRepository;
 import io.github.authzfuzzer.domain.Role;
+import io.github.authzfuzzer.domain.ShareGrant;
+import io.github.authzfuzzer.domain.ShareGrantRepository;
 import io.github.authzfuzzer.domain.Tenant;
 import io.github.authzfuzzer.domain.TenantRepository;
 import io.github.authzfuzzer.security.AppUserPrincipal;
@@ -34,6 +36,9 @@ class ResourceServiceTest {
 
     @Autowired
     ResourceRepository resources;
+
+    @Autowired
+    ShareGrantRepository shares;
 
     Tenant tenant(String name) {
         return tenants.save(new Tenant(name));
@@ -130,5 +135,27 @@ class ResourceServiceTest {
         Resource r = resource("a1", a);
         assertThat(resources.findByIdAndTenantId(r.getId(), a.getId())).isPresent();
         assertThat(resources.findByIdAndTenantId(r.getId(), b.getId())).isEmpty();
+    }
+
+    @Test
+    void granteeCanReadButNotWriteASharedResource() {
+        Tenant owner = tenant("alpha");
+        Tenant grantee = tenant("bravo");
+        Resource r = resource("shared", owner);
+        shares.save(new ShareGrant(r, grantee));
+        AppUserPrincipal them = admin(grantee);
+        assertThat(service.get(them, r.getId()).tenant()).isEqualTo("alpha");
+        assertThatThrownBy(() -> service.update(them, r.getId(), request("x", "y")))
+                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.delete(them, r.getId())).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void shareWithOneTenantDoesNotOpenItToOthers() {
+        Tenant owner = tenant("alpha");
+        Resource r = resource("shared", owner);
+        shares.save(new ShareGrant(r, tenant("bravo")));
+        assertThatThrownBy(() -> service.get(admin(tenant("charlie")), r.getId()))
+                .isInstanceOf(NotFoundException.class);
     }
 }
