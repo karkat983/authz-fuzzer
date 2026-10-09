@@ -24,6 +24,9 @@ class RolePermissionsTest {
         "ADMIN,  CREATE, true",
         "ADMIN,  UPDATE, true",
         "ADMIN,  DELETE, true",
+        "VIEWER, MANAGE_USERS, false",
+        "EDITOR, MANAGE_USERS, false",
+        "ADMIN,  MANAGE_USERS, true",
     })
     void matrix(Role role, Permission permission, boolean allowed) {
         assertThat(RolePermissions.allows(role, permission)).isEqualTo(allowed);
