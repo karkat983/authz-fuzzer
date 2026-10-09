@@ -69,4 +69,9 @@ class HandWrittenAuthzExamplesTest {
     void adminDeletesOwnTenantResource() throws Exception {
         mvc.perform(delete("/api/resources/3").with(as("alpha-admin"))).andExpect(status().isNoContent());
     }
+
+    @Test
+    void tenantBGets404OnTenantAResource() throws Exception {
+        mvc.perform(get("/api/resources/1").with(as("bravo-viewer"))).andExpect(status().isNotFound());
+    }
 }
