@@ -1,6 +1,7 @@
 package io.github.authzfuzzer.examples;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -62,5 +63,10 @@ class HandWrittenAuthzExamplesTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("example"))
                 .andExpect(jsonPath("$.tenant").value("alpha"));
+    }
+
+    @Test
+    void adminDeletesOwnTenantResource() throws Exception {
+        mvc.perform(delete("/api/resources/3").with(as("alpha-admin"))).andExpect(status().isNoContent());
     }
 }
