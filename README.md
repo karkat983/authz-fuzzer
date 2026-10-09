@@ -48,3 +48,9 @@ No external data; all users and resources are synthetic seed data. Not affiliate
 - `ResourceService` with list / get / create / update / delete and JPA tests.
 - Problem-JSON error handler: generic 404s that never echo IDs or tenant names.
 - Quiet logging config for app and tests.
+- Authentication (HTTP Basic, BCrypt) and RBAC: viewer / editor / admin permission matrix,
+  tenant-scoped queries plus an object-level tenant check; cross-tenant access is a 404
+  identical to a missing object (docs/decisions/001-404-vs-403.md).
+- REST endpoints for resources, an admin-only user list, and read-only sharing between tenants
+  (grant, revoke); the full policy is one table in docs/authz-model.md.
+- Hand-written example tests for each rule, kept separate for comparison with the property suite.
