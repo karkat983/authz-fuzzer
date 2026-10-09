@@ -18,15 +18,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.github.authzfuzzer.security.AppUserPrincipal;
 import io.github.authzfuzzer.service.ResourceService;
+import io.github.authzfuzzer.service.ShareService;
 
 @RestController
 @RequestMapping("/api/resources")
 public class ResourceController {
 
     private final ResourceService service;
+    private final ShareService shares;
 
-    public ResourceController(ResourceService service) {
+    public ResourceController(ResourceService service, ShareService shares) {
         this.service = service;
+        this.shares = shares;
     }
 
     /** Resources of the caller's own tenant. */
@@ -60,5 +63,15 @@ public class ResourceController {
     ResponseEntity<Void> delete(@AuthenticationPrincipal AppUserPrincipal caller, @PathVariable Long id) {
         service.delete(caller, id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/shares")
+    ResponseEntity<ShareDto> share(
+            @AuthenticationPrincipal AppUserPrincipal caller,
+            @PathVariable Long id,
+            @Valid @RequestBody ShareRequest request) {
+        ShareDto grant = shares.grant(caller, id, request.tenant());
+        return ResponseEntity.created(URI.create("/api/resources/" + id + "/shares/" + grant.tenant()))
+                .body(grant);
     }
 }

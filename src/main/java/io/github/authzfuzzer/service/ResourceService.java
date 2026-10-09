@@ -10,6 +10,7 @@ import io.github.authzfuzzer.api.ResourceMapper;
 import io.github.authzfuzzer.api.ResourceRequest;
 import io.github.authzfuzzer.domain.Resource;
 import io.github.authzfuzzer.domain.ResourceRepository;
+import io.github.authzfuzzer.domain.ShareGrantRepository;
 import io.github.authzfuzzer.domain.Tenant;
 import io.github.authzfuzzer.domain.TenantRepository;
 import io.github.authzfuzzer.security.AppUserPrincipal;
@@ -28,11 +29,17 @@ public class ResourceService {
     private final ResourceRepository resources;
     private final TenantRepository tenants;
     private final AuthorizationService authz;
+    private final ShareGrantRepository shares;
 
-    public ResourceService(ResourceRepository resources, TenantRepository tenants, AuthorizationService authz) {
+    public ResourceService(
+            ResourceRepository resources,
+            TenantRepository tenants,
+            AuthorizationService authz,
+            ShareGrantRepository shares) {
         this.resources = resources;
         this.tenants = tenants;
         this.authz = authz;
+        this.shares = shares;
     }
 
     /** All resources owned by the caller's tenant, oldest first. */
@@ -70,7 +77,9 @@ public class ResourceService {
     @Transactional
     public void delete(AppUserPrincipal caller, Long id) {
         authz.check(caller, Permission.DELETE);
-        resources.delete(owned(caller, id));
+        Resource r = owned(caller, id);
+        shares.deleteAll(shares.findAllByResourceId(r.getId())); // a deleted resource keeps no grants
+        resources.delete(r);
     }
 
     /**

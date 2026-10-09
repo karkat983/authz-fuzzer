@@ -12,10 +12,10 @@ import io.github.authzfuzzer.domain.Role;
  * it and the property tests use it as their oracle.
  *
  * <pre>
- *            READ  CREATE  UPDATE  DELETE  MANAGE_USERS
+ *            READ  CREATE  UPDATE  DELETE  MANAGE_USERS  SHARE
  *   VIEWER    x
  *   EDITOR    x      x       x
- *   ADMIN     x      x       x       x          x
+ *   ADMIN     x      x       x       x          x          x
  * </pre>
  */
 public final class RolePermissions {
