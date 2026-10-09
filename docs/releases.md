@@ -1,5 +1,18 @@
 # Releases
 
+## v0.2-rbac (2026-10-09)
+
+Authentication and authorization, ready to be attacked by the property suite.
+
+- HTTP Basic login with BCrypt; the principal carries tenant and role from the database.
+- Role -> permission matrix (VIEWER / EDITOR / ADMIN; READ, CREATE, UPDATE, DELETE, MANAGE_USERS,
+  SHARE), checked first in every service method.
+- Tenant isolation in two layers: tenant-scoped queries and an object-level check.
+- Cross-tenant access returns the same 404 as a missing object (ADR 001).
+- REST endpoints for resources, admin user listing, read-only sharing (grant / revoke).
+- Policy documented as one table (docs/authz-model.md); 102 tests passing, including
+  hand-written examples for each rule.
+
 ## v0.1-skeleton (2026-10-09)
 
 The service skeleton, before any authentication or authorization.
