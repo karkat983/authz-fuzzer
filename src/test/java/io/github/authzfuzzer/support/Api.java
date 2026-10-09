@@ -56,6 +56,18 @@ public final class Api {
         return b.contentType(MediaType.APPLICATION_JSON).content(body(name, content));
     }
 
+    public ResultActions share(String user, long id, String tenant) throws Exception {
+        return send(
+                MockMvcRequestBuilders.post("/api/resources/{id}/shares", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tenant\":\"" + tenant + "\"}"),
+                user);
+    }
+
+    public ResultActions revoke(String user, long id, String tenant) throws Exception {
+        return send(MockMvcRequestBuilders.delete("/api/resources/{id}/shares/{tenant}", id, tenant), user);
+    }
+
     /** user == null sends the request without credentials. */
     private ResultActions send(MockHttpServletRequestBuilder request, String user) throws Exception {
         return mvc.perform(user == null ? request : request.with(as(user)));

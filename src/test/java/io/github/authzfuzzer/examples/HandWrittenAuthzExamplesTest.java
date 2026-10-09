@@ -78,4 +78,28 @@ class HandWrittenAuthzExamplesTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].tenant", everyItem(is("bravo"))));
     }
+
+    @Test
+    void granteeReadsSharedResourceButCannotChangeIt() throws Exception {
+        api.share("alpha-admin", 2, "charlie").andExpect(status().isCreated());
+        api.get("charlie-viewer", 2)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tenant").value("alpha"));
+        api.update("charlie-admin", 2, "x", "y").andExpect(status().isNotFound());
+        api.delete("charlie-admin", 2).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void revokedGrantNoLongerGivesAccess() throws Exception {
+        api.share("alpha-admin", 2, "charlie").andExpect(status().isCreated());
+        api.revoke("alpha-admin", 2, "charlie").andExpect(status().isNoContent());
+        api.get("charlie-viewer", 2).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void ownerDeletingASharedResourceRemovesTheGrant() throws Exception {
+        api.share("alpha-admin", 2, "charlie").andExpect(status().isCreated());
+        api.delete("alpha-admin", 2).andExpect(status().isNoContent());
+        api.get("charlie-viewer", 2).andExpect(status().isNotFound());
+    }
 }
