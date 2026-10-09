@@ -74,4 +74,9 @@ class HandWrittenAuthzExamplesTest {
     void tenantBGets404OnTenantAResource() throws Exception {
         mvc.perform(get("/api/resources/1").with(as("bravo-viewer"))).andExpect(status().isNotFound());
     }
+
+    @Test
+    void unauthenticatedGets401() throws Exception {
+        mvc.perform(get("/api/resources/1")).andExpect(status().isUnauthorized());
+    }
 }
