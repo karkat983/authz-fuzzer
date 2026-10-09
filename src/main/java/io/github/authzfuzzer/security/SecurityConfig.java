@@ -14,7 +14,7 @@ public class SecurityConfig {
     /**
      * Every /api/** request must authenticate with HTTP Basic; no sessions are created, so each
      * request is judged on its own credentials. CSRF protection is off because the API is
-     * stateless and accepts no cookies (see the CSRF ADR in the RBAC phase).
+     * stateless and accepts no cookies (docs/decisions/002-csrf.md).
      */
     @Bean
     SecurityFilterChain api(HttpSecurity http) throws Exception {
