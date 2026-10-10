@@ -1,0 +1,35 @@
+[package]
+name = "authz-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The authz command-line scanner."
+
+[[bin]]
+name = "authz"
+path = "src/main.rs"
+
+[lib]
+name = "authz_cli"
+path = "src/lib.rs"
+
+[dependencies]
+authz-core = { path = "../authz-core" }
+authz-http = { path = "../authz-http" }
+authz-openapi = { path = "../authz-openapi" }
+authz-oracle = { path = "../authz-oracle" }
+authz-exec = { path = "../authz-exec" }
+authz-scan = { path = "../authz-scan" }
+authz-findings = { path = "../authz-findings" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow = { workspace = true }
+clap.workspace = true
+tokio.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+async-trait = "0.1"
+tokio = { workspace = true, features = ["rt", "macros"] }
