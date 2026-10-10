@@ -120,7 +120,7 @@ mod tests {
         let g = guard(10);
         assert!(matches!(
             g.check(HttpMethod::Delete, "api.test"),
-            Err(GuardError::OutOfScope(ScopeError::MethodNotPermitted(_)))
+            Err(GuardError::OutOfScope(ScopeError::MutationForbidden(_)))
         ));
     }
 

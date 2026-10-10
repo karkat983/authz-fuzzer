@@ -1,0 +1,22 @@
+[package]
+name = "authz-scan"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Scan orchestration: fixtures, probe planning and the async runner that produces findings."
+
+[dependencies]
+authz-core = { path = "../authz-core" }
+authz-http = { path = "../authz-http" }
+authz-openapi = { path = "../authz-openapi" }
+authz-oracle = { path = "../authz-oracle" }
+authz-exec = { path = "../authz-exec" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+async-trait = "0.1"

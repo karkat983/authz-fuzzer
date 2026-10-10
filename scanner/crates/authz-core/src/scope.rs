@@ -121,14 +121,20 @@ impl Scope {
     }
 
     /// Whether a method is permitted, taking the allowlist and mutation policy into account.
+    ///
+    /// Safe (read) methods are always permitted inside the scope — the scanner must be able
+    /// to read to verify. Each *mutating* method is permitted only when the mutation policy
+    /// allows mutation **and** the method is on `permitted_methods`; an empty allowlist
+    /// therefore permits reads but no mutations.
     pub fn method_permitted(&self, method: HttpMethod) -> Result<(), ScopeError> {
-        let listed = self.permitted_methods.is_empty() && method.is_safe()
-            || self.permitted_methods.contains(&method);
-        if !listed {
-            return Err(ScopeError::MethodNotPermitted(method));
+        if method.is_safe() {
+            return Ok(());
         }
-        if method.is_mutating() && !self.mutation.allows_mutation() {
+        if !self.mutation.allows_mutation() {
             return Err(ScopeError::MutationForbidden(method));
+        }
+        if !self.permitted_methods.contains(&method) {
+            return Err(ScopeError::MethodNotPermitted(method));
         }
         Ok(())
     }
@@ -199,13 +205,30 @@ mod tests {
     }
 
     #[test]
-    fn read_only_scope_admits_safe_methods_only() {
+    fn read_only_scope_admits_reads_but_refuses_mutations() {
         let s = scope();
         assert!(s.admits(HttpMethod::Get, "staging.example.test").is_ok());
+        assert!(s.admits(HttpMethod::Head, "staging.example.test").is_ok());
+        // A mutating method under a read-only policy is refused as a mutation.
         assert_eq!(
             s.admits(HttpMethod::Delete, "staging.example.test"),
-            Err(ScopeError::MethodNotPermitted(HttpMethod::Delete))
+            Err(ScopeError::MutationForbidden(HttpMethod::Delete))
         );
+    }
+
+    #[test]
+    fn mutating_method_must_be_listed_even_when_mutation_allowed() {
+        let mut s = scope();
+        s.mutation = MutationPolicy::TestOwnedOnly;
+        // Patch is allowed by policy but not on the (empty) allowlist.
+        assert_eq!(
+            s.method_permitted(HttpMethod::Patch),
+            Err(ScopeError::MethodNotPermitted(HttpMethod::Patch))
+        );
+        s.permitted_methods.insert(HttpMethod::Patch);
+        assert!(s.method_permitted(HttpMethod::Patch).is_ok());
+        // reads remain allowed throughout
+        assert!(s.method_permitted(HttpMethod::Get).is_ok());
     }
 
     #[test]

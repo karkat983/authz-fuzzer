@@ -19,5 +19,5 @@ pub mod parse;
 pub mod refs;
 pub mod registry;
 
-pub use parse::{discover, DiscoveryReport, OpenApiError};
+pub use parse::{discover, discover_str, DiscoveryReport, OpenApiError};
 pub use registry::OperationRegistry;

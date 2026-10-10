@@ -129,6 +129,24 @@ pub fn discover(spec: &Value) -> Result<(OperationRegistry, DiscoveryReport), Op
                 extract_body_fields(spec, op_obj.get("requestBody"), &mut report, raw_path);
             params.extend(body_params);
 
+            // Synthesize a Path parameter for any `{placeholder}` in the path that the spec
+            // did not declare explicitly. Real specs often omit these, but the scanner must
+            // still know the path takes an id to bind and tamper with it.
+            for name in path_placeholders(raw_path) {
+                let declared = params
+                    .iter()
+                    .any(|p| p.name == name && p.location == ParamLocation::Path);
+                if !declared {
+                    params.push(Parameter {
+                        name,
+                        location: ParamLocation::Path,
+                        required: true,
+                        type_hint: None,
+                        is_object_reference: false,
+                    });
+                }
+            }
+
             // Classify object references on every parameter.
             for p in &mut params {
                 p.is_object_reference =
@@ -183,6 +201,27 @@ pub fn discover(spec: &Value) -> Result<(OperationRegistry, DiscoveryReport), Op
 pub fn discover_str(json: &str) -> Result<(OperationRegistry, DiscoveryReport), OpenApiError> {
     let spec: Value = serde_json::from_str(json).map_err(|e| OpenApiError::Json(e.to_string()))?;
     discover(&spec)
+}
+
+/// Extract the `{placeholder}` names from a raw path template, in order.
+fn path_placeholders(raw_path: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    let mut chars = raw_path.chars();
+    while let Some(c) = chars.next() {
+        if c == '{' {
+            let mut name = String::new();
+            for nc in chars.by_ref() {
+                if nc == '}' {
+                    break;
+                }
+                name.push(nc);
+            }
+            if !name.is_empty() {
+                names.push(name);
+            }
+        }
+    }
+    names
 }
 
 /// Resolve a possibly-`$ref` value, recording a warning on failure and returning `None`.
