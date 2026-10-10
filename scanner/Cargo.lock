@@ -42,6 +42,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "authz-exec"
+version = "0.1.0"
+dependencies = [
+ "authz-core",
+ "authz-http",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "authz-http"
 version = "0.1.0"
 dependencies = [
