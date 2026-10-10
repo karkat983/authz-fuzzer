@@ -1,0 +1,16 @@
+[package]
+name = "authz-openapi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "OpenAPI 3.x discovery: parse a spec into the AuthZ operation registry."
+
+[dependencies]
+authz-core = { path = "../authz-core" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+indexmap.workspace = true
+
+[dev-dependencies]
