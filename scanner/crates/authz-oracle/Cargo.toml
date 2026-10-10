@@ -1,0 +1,15 @@
+[package]
+name = "authz-oracle"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The authorization oracle: decides, from observed responses and state, whether an access was an unauthorized effect."
+
+[dependencies]
+authz-core = { path = "../authz-core" }
+authz-http = { path = "../authz-http" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
