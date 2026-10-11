@@ -1,0 +1,24 @@
+[package]
+name = "authz-target"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "A reference multi-tenant orders API with selectable authorization-vulnerability modes, used to validate the scanner."
+
+[[bin]]
+name = "authz-target"
+path = "src/main.rs"
+
+[lib]
+name = "authz_target"
+path = "src/lib.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+clap.workspace = true
+
+[dev-dependencies]

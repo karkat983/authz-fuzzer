@@ -32,4 +32,5 @@ chrono.workspace = true
 
 [dev-dependencies]
 async-trait = "0.1"
-tokio = { workspace = true, features = ["rt", "macros"] }
+authz-target = { path = "../authz-target" }
+tokio = { version = "1", features = ["full"] }
