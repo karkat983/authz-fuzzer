@@ -38,6 +38,9 @@ fn principal(state: &AppState, headers: &HeaderMap) -> Option<Principal> {
 
 /// Whether `who` may read `order` under the configured vulnerability mode.
 fn can_read(state: &AppState, who: &Option<Principal>, order: &Order) -> bool {
+    if order.public {
+        return true; // a public order is readable by anyone (legitimate)
+    }
     match state.vulnerability {
         Vulnerability::MissingAuth => true, // no authentication required (the bug)
         Vulnerability::BolaRead => who.is_some(), // any authenticated caller (the bug)
@@ -156,7 +159,26 @@ mod tests {
             status: "open".into(),
             note: "x".into(),
             shared_with: vec![],
+            public: false,
         }
+    }
+
+    #[test]
+    fn public_order_is_readable_cross_tenant_and_unauth() {
+        let s = AppState::seeded(Vulnerability::None);
+        let mut o = order();
+        o.public = true;
+        assert!(can_read(&s, &p("bravo"), &o)); // cross-tenant read of public order
+        assert!(can_read(&s, &None, &o)); // even unauthenticated
+    }
+
+    #[test]
+    fn shared_order_is_readable_by_grantee_but_not_writable_hardened() {
+        let s = AppState::seeded(Vulnerability::None);
+        let mut o = order();
+        o.shared_with.push("bravo".into());
+        assert!(can_read(&s, &p("bravo"), &o)); // delegated read is legitimate
+        assert!(!can_write(&s, &p("bravo"), &o)); // sharing is read-only when hardened
     }
 
     #[test]

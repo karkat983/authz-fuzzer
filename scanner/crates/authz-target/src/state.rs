@@ -62,6 +62,10 @@ pub struct Order {
     /// Tenants this order is shared with (read access).
     #[serde(default)]
     pub shared_with: Vec<String>,
+    /// Whether the order is public (readable by anyone, including cross-tenant
+    /// and unauthenticated callers). A public read is legitimate, not a finding.
+    #[serde(default)]
+    pub public: bool,
 }
 
 impl Order {
@@ -108,6 +112,46 @@ impl AppState {
                 status: "open".into(),
                 note: "alpha private order".into(),
                 shared_with: Vec::new(),
+                public: false,
+            },
+        );
+        // An alpha order shared read-only with tenant bravo: a bravo read is a
+        // legitimate delegated access (AZ-005 FP trap); a bravo write is only
+        // possible under the SharedWrite bug.
+        orders.insert(
+            "order-shared".into(),
+            Order {
+                id: "order-shared".into(),
+                owner_tenant: "alpha".into(),
+                status: "open".into(),
+                note: "alpha order shared with bravo".into(),
+                shared_with: vec!["bravo".into()],
+                public: false,
+            },
+        );
+        // A public alpha order: readable by anyone, so a cross-tenant read is
+        // legitimate and must not be flagged (AZ-004 FP trap).
+        orders.insert(
+            "order-public".into(),
+            Order {
+                id: "order-public".into(),
+                owner_tenant: "alpha".into(),
+                status: "open".into(),
+                note: "public catalogue order".into(),
+                shared_with: Vec::new(),
+                public: true,
+            },
+        );
+        // A bravo-owned order, so the lab has a second-tenant resource.
+        orders.insert(
+            "order-bravo".into(),
+            Order {
+                id: "order-bravo".into(),
+                owner_tenant: "bravo".into(),
+                status: "open".into(),
+                note: "bravo private order".into(),
+                shared_with: Vec::new(),
+                public: false,
             },
         );
         AppState {
@@ -154,6 +198,7 @@ impl AppState {
             status: "open".into(),
             note: note.to_string(),
             shared_with: Vec::new(),
+            public: false,
         };
         inner.orders.insert(id, order.clone());
         order
