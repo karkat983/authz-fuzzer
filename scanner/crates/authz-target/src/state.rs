@@ -23,6 +23,15 @@ pub enum Vulnerability {
     MissingAuth,
     /// A shared resource is writable by the grantee (sharing should be read-only).
     SharedWrite,
+    /// Status-vs-effect: a cross-tenant PATCH/DELETE is answered 403 but still applied.
+    SilentWrite,
+    /// Status-vs-effect: a cross-tenant PATCH/DELETE is answered 200/204 but nothing changes.
+    LyingSuccess,
+    /// Status-vs-effect trap: writes are allowed only to same-tenant admins (viewers are
+    /// read-only), so an admin changing a viewer's order is legitimate, not a finding.
+    AdminLegit,
+    /// Status-vs-effect: a cross-tenant GET is answered 404 whose body is the owner's order.
+    Leaky404,
 }
 
 impl Vulnerability {
@@ -34,6 +43,10 @@ impl Vulnerability {
             "bola-write" => Some(Vulnerability::BolaWrite),
             "missing-auth" => Some(Vulnerability::MissingAuth),
             "shared-write" => Some(Vulnerability::SharedWrite),
+            "silent-write" => Some(Vulnerability::SilentWrite),
+            "lying-success" => Some(Vulnerability::LyingSuccess),
+            "admin-legit" => Some(Vulnerability::AdminLegit),
+            "leaky-404" => Some(Vulnerability::Leaky404),
             _ => None,
         }
     }
@@ -99,9 +112,27 @@ impl AppState {
     /// given vulnerability mode.
     pub fn seeded(vulnerability: Vulnerability) -> Self {
         let mut tokens = HashMap::new();
-        tokens.insert("tok-alpha-admin".into(), Principal { tenant: "alpha".into(), admin: true });
-        tokens.insert("tok-alpha-viewer".into(), Principal { tenant: "alpha".into(), admin: false });
-        tokens.insert("tok-bravo-admin".into(), Principal { tenant: "bravo".into(), admin: true });
+        tokens.insert(
+            "tok-alpha-admin".into(),
+            Principal {
+                tenant: "alpha".into(),
+                admin: true,
+            },
+        );
+        tokens.insert(
+            "tok-alpha-viewer".into(),
+            Principal {
+                tenant: "alpha".into(),
+                admin: false,
+            },
+        );
+        tokens.insert(
+            "tok-bravo-admin".into(),
+            Principal {
+                tenant: "bravo".into(),
+                admin: true,
+            },
+        );
 
         let mut orders = HashMap::new();
         orders.insert(
@@ -221,7 +252,26 @@ mod tests {
     #[test]
     fn vulnerability_parse() {
         assert_eq!(Vulnerability::parse("none"), Some(Vulnerability::None));
-        assert_eq!(Vulnerability::parse("bola-read"), Some(Vulnerability::BolaRead));
+        assert_eq!(
+            Vulnerability::parse("bola-read"),
+            Some(Vulnerability::BolaRead)
+        );
+        assert_eq!(
+            Vulnerability::parse("silent-write"),
+            Some(Vulnerability::SilentWrite)
+        );
+        assert_eq!(
+            Vulnerability::parse("lying-success"),
+            Some(Vulnerability::LyingSuccess)
+        );
+        assert_eq!(
+            Vulnerability::parse("admin-legit"),
+            Some(Vulnerability::AdminLegit)
+        );
+        assert_eq!(
+            Vulnerability::parse("leaky-404"),
+            Some(Vulnerability::Leaky404)
+        );
         assert_eq!(Vulnerability::parse("nonsense"), None);
     }
 
@@ -237,7 +287,10 @@ mod tests {
     #[test]
     fn mutations_work() {
         let s = AppState::seeded(Vulnerability::None);
-        assert_eq!(s.set_status("order-1", "cancelled").unwrap().status, "cancelled");
+        assert_eq!(
+            s.set_status("order-1", "cancelled").unwrap().status,
+            "cancelled"
+        );
         let created = s.create("bravo", "note");
         assert_eq!(created.owner_tenant, "bravo");
         assert!(s.delete(&created.id));

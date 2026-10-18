@@ -56,6 +56,8 @@ fn can_write(state: &AppState, who: &Option<Principal>, order: &Order) -> bool {
     match (state.vulnerability, who) {
         (_, None) => false,
         (Vulnerability::BolaWrite, Some(_)) => true, // any authenticated caller (the bug)
+        // viewers are read-only; a same-tenant admin may write any order (legitimate)
+        (Vulnerability::AdminLegit, Some(p)) => p.tenant == order.owner_tenant && p.admin,
         (Vulnerability::SharedWrite, Some(p)) => {
             // sharing should be read-only; this mode lets a grantee write (the bug)
             p.tenant == order.owner_tenant || order.shared_with.contains(&p.tenant)
@@ -75,8 +77,14 @@ async fn get_order(
     };
     if can_read(&state, &who, &order) {
         (StatusCode::OK, Json(order.view()))
+    } else if who.is_some() && state.vulnerability == Vulnerability::Leaky404 {
+        // "not found" on the status line, the owner's order in the body (the bug)
+        (StatusCode::NOT_FOUND, Json(order.view()))
     } else if who.is_none() {
-        (StatusCode::UNAUTHORIZED, Json(json!({"error": "unauthorized"})))
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "unauthorized"})),
+        )
     } else {
         (StatusCode::FORBIDDEN, Json(json!({"error": "forbidden"})))
     }
@@ -92,12 +100,27 @@ async fn patch_order(
     let Some(order) = state.order(&id) else {
         return (StatusCode::NOT_FOUND, Json(json!({"error": "not found"})));
     };
-    if !can_write(&state, &who, &order) {
-        return deny(&who);
-    }
     let status = body
         .and_then(|Json(v)| v.get("status").and_then(Value::as_str).map(String::from))
         .unwrap_or_else(|| "cancelled".to_string());
+    if !can_write(&state, &who, &order) {
+        if who.is_some() {
+            match state.vulnerability {
+                // denied on the status line, applied anyway (the bug)
+                Vulnerability::SilentWrite => {
+                    state.set_status(&id, &status);
+                }
+                // success on the status line, nothing applied (the lie)
+                Vulnerability::LyingSuccess => {
+                    let mut claimed = order.clone();
+                    claimed.status = status;
+                    return (StatusCode::OK, Json(claimed.view()));
+                }
+                _ => {}
+            }
+        }
+        return deny(&who);
+    }
     let updated = state.set_status(&id, &status).expect("order exists");
     (StatusCode::OK, Json(updated.view()))
 }
@@ -112,6 +135,15 @@ async fn delete_order(
         return (StatusCode::NOT_FOUND, Json(json!({"error": "not found"})));
     };
     if !can_write(&state, &who, &order) {
+        if who.is_some() {
+            match state.vulnerability {
+                Vulnerability::SilentWrite => {
+                    state.delete(&id);
+                }
+                Vulnerability::LyingSuccess => return (StatusCode::NO_CONTENT, Json(json!(null))),
+                _ => {}
+            }
+        }
         return deny(&who);
     }
     state.delete(&id);
@@ -124,7 +156,10 @@ async fn create_order(
     body: Option<Json<Value>>,
 ) -> (StatusCode, Json<Value>) {
     let Some(p) = principal(&state, &headers) else {
-        return (StatusCode::UNAUTHORIZED, Json(json!({"error": "unauthorized"})));
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "unauthorized"})),
+        );
     };
     let note = body
         .and_then(|Json(v)| v.get("note").and_then(Value::as_str).map(String::from))
@@ -135,7 +170,10 @@ async fn create_order(
 
 fn deny(who: &Option<Principal>) -> (StatusCode, Json<Value>) {
     if who.is_none() {
-        (StatusCode::UNAUTHORIZED, Json(json!({"error": "unauthorized"})))
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "unauthorized"})),
+        )
     } else {
         (StatusCode::FORBIDDEN, Json(json!({"error": "forbidden"})))
     }
@@ -213,6 +251,146 @@ mod tests {
     fn bola_write_mode_lets_cross_tenant_write() {
         let s = AppState::seeded(Vulnerability::BolaWrite);
         assert!(can_write(&s, &p("bravo"), &order()));
+    }
+
+    fn admin(tenant: &str) -> Option<Principal> {
+        Some(Principal {
+            tenant: tenant.into(),
+            admin: true,
+        })
+    }
+
+    #[test]
+    fn admin_legit_mode_lets_only_same_tenant_admins_write() {
+        let s = AppState::seeded(Vulnerability::AdminLegit);
+        assert!(can_write(&s, &admin("alpha"), &order()));
+        assert!(!can_write(&s, &p("alpha"), &order())); // a viewer is read-only
+        assert!(!can_write(&s, &admin("bravo"), &order())); // cross-tenant admin
+        assert!(can_read(&s, &p("alpha"), &order()));
+    }
+
+    #[test]
+    fn status_vs_effect_modes_keep_hardened_policy() {
+        // the bugs are in what the handlers *do* with a denial, not in the policy itself
+        for mode in [
+            Vulnerability::SilentWrite,
+            Vulnerability::LyingSuccess,
+            Vulnerability::Leaky404,
+        ] {
+            let s = AppState::seeded(mode);
+            assert!(!can_write(&s, &p("bravo"), &order()));
+            assert!(!can_read(&s, &p("bravo"), &order()));
+        }
+    }
+
+    fn bearer(token: &str) -> HeaderMap {
+        let mut h = HeaderMap::new();
+        h.insert("authorization", format!("Bearer {token}").parse().unwrap());
+        h
+    }
+
+    fn patch_body() -> Option<Json<Value>> {
+        Some(Json(json!({"status": "cancelled"})))
+    }
+
+    #[tokio::test]
+    async fn silent_write_answers_403_but_applies_the_change() {
+        let s = AppState::seeded(Vulnerability::SilentWrite);
+        let (code, _) = patch_order(
+            State(s.clone()),
+            Path("order-1".into()),
+            bearer("tok-bravo-admin"),
+            patch_body(),
+        )
+        .await;
+        assert_eq!(code, StatusCode::FORBIDDEN);
+        assert_eq!(s.order("order-1").unwrap().status, "cancelled"); // applied anyway
+        let (code, _) = delete_order(
+            State(s.clone()),
+            Path("order-1".into()),
+            bearer("tok-bravo-admin"),
+        )
+        .await;
+        assert_eq!(code, StatusCode::FORBIDDEN);
+        assert!(s.order("order-1").is_none()); // deleted anyway
+    }
+
+    #[tokio::test]
+    async fn lying_success_answers_2xx_but_changes_nothing() {
+        let s = AppState::seeded(Vulnerability::LyingSuccess);
+        let (code, Json(body)) = patch_order(
+            State(s.clone()),
+            Path("order-1".into()),
+            bearer("tok-bravo-admin"),
+            patch_body(),
+        )
+        .await;
+        assert_eq!(code, StatusCode::OK);
+        assert_eq!(body["status"], "cancelled"); // claims the change
+        assert_eq!(s.order("order-1").unwrap().status, "open"); // but nothing changed
+        let (code, _) = delete_order(
+            State(s.clone()),
+            Path("order-1".into()),
+            bearer("tok-bravo-admin"),
+        )
+        .await;
+        assert_eq!(code, StatusCode::NO_CONTENT);
+        assert!(s.order("order-1").is_some());
+        // the owner's own write still works
+        let (code, _) = patch_order(
+            State(s.clone()),
+            Path("order-1".into()),
+            bearer("tok-alpha-admin"),
+            patch_body(),
+        )
+        .await;
+        assert_eq!(code, StatusCode::OK);
+        assert_eq!(s.order("order-1").unwrap().status, "cancelled");
+    }
+
+    #[tokio::test]
+    async fn admin_legit_applies_admin_writes_and_denies_viewers() {
+        let s = AppState::seeded(Vulnerability::AdminLegit);
+        let (code, _) = patch_order(
+            State(s.clone()),
+            Path("order-1".into()),
+            bearer("tok-alpha-viewer"),
+            patch_body(),
+        )
+        .await;
+        assert_eq!(code, StatusCode::FORBIDDEN);
+        assert_eq!(s.order("order-1").unwrap().status, "open");
+        let (code, _) = patch_order(
+            State(s.clone()),
+            Path("order-1".into()),
+            bearer("tok-alpha-admin"),
+            patch_body(),
+        )
+        .await;
+        assert_eq!(code, StatusCode::OK);
+        assert_eq!(s.order("order-1").unwrap().status, "cancelled");
+    }
+
+    #[tokio::test]
+    async fn leaky_404_returns_the_owners_order_under_a_404() {
+        let s = AppState::seeded(Vulnerability::Leaky404);
+        let (_, Json(owner_view)) = get_order(
+            State(s.clone()),
+            Path("order-1".into()),
+            bearer("tok-alpha-admin"),
+        )
+        .await;
+        let (code, Json(body)) = get_order(
+            State(s.clone()),
+            Path("order-1".into()),
+            bearer("tok-bravo-admin"),
+        )
+        .await;
+        assert_eq!(code, StatusCode::NOT_FOUND);
+        assert_eq!(body, owner_view);
+        // unauthenticated callers still get a plain 401
+        let (code, _) = get_order(State(s), Path("order-1".into()), HeaderMap::new()).await;
+        assert_eq!(code, StatusCode::UNAUTHORIZED);
     }
 
     #[test]

@@ -19,7 +19,8 @@ struct Args {
     /// Port to listen on.
     #[arg(long, default_value_t = 8080)]
     port: u16,
-    /// Vulnerability mode: none | bola-read | bola-write | missing-auth | shared-write.
+    /// Vulnerability mode: none | bola-read | bola-write | missing-auth | shared-write |
+    /// silent-write | lying-success | admin-legit | leaky-404.
     #[arg(long, default_value = "none")]
     vuln: String,
 }
@@ -33,7 +34,10 @@ async fn main() -> std::io::Result<()> {
     });
     let addr = SocketAddr::from(([127, 0, 0, 1], args.port));
     let (bound, guard) = serve(addr, vulnerability).await?;
-    println!("reference orders API on http://{bound} (mode: {:?})", vulnerability);
+    println!(
+        "reference orders API on http://{bound} (mode: {:?})",
+        vulnerability
+    );
     println!("tokens: tok-alpha-admin, tok-alpha-viewer, tok-bravo-admin");
     // Run until Ctrl-C.
     let _ = tokio::signal::ctrl_c().await;
